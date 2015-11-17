@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Calender Application</title>
+        <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+    </head>
+    <body ng-app="TempApp">
+<style>
+#calendar {
+    display:inline-block;
+    background:white;
+    margin: auto;
+    border:solid 3px #BBB;
+    margin-bottom:10px;
+    display:table;
+    max-width: 850px;
+}
+#calendar>div.header>span {
+    width:100%;
+    font-weight:bold;
+    text-transform:uppercase;
+    padding-left:10px;
+    margin-left:10px;
+    text-align:center;
+    padding-right:40px;
+    color: black;
+    display:table-caption;
+}
+h1.monName{
+    text-align: center;
+	color: #ECECF6;
+    text-shadow: -1px -1px 1px #FFFFFF, 1px 1px 1px #000000;
+}
+
+
+#calendar>div.week {
+    float:left;
+    width:100%;
+    border-top:solid 1px #ccc;
+    display:table-row;
+}        
+#calendar>div.week:first-child {
+    border-top:none;
+}
+#calendar>span.day:first-child {
+    border-left:none;
+}
+
+#calendar>span.day {
+    float:left;
+    width:100%;
+    border-left:solid 1px #CCC;
+    font-size:1.5em;
+    text-align:center;
+    background:white;
+    cursor:pointer;
+    color:black;
+   
+}            
+
+.currDay {
+    background:#00BFFF;
+}
+
+.day {
+    color: FireBrick;
+    font-weight:bold;
+    width: 50px;
+    padding:35px;
+    display: table-cell;
+}
+
+</style>
+        <div ng-controller="calController" id="calendar">
+            <div class="header">
+                <h1 ng-bind="curr" class="monName"></h1>
+            </div>
+            <div class="week names">
+                <span class="day">Mon</span>
+                <span class="day">Tues</span>
+                <span class="day">Wed</span>
+                <span class="day">Thur</span>
+                <span class="day">Fri</span>
+                <span class="day">Sat</span>
+                <span class="day">Sun</span>
+            </div>
+            <div class="week" ng-repeat="week in weeks">
+              
+                <div ng-repeat="day in week" style="display: inline-block">
+                    <span class="day" id="day.id" ng-class="day.class" ng-bind="day.data"></span>
+                </div>      
+            </div>   
+        </div>
+<script>
+var app = angular.module("TempApp", []);
+var query = "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(2211027)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback=";
+var monNames = ["January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December"];
+
+
+app.factory('tempData', ['$http', '$q', function ($http, $q){
+      function getTemp() {
+        var deferred = $q.defer();
+        $http.get(query)
+          .success(function(data){
+            deferred.resolve(data.query.results.channel);
+          })
+          .error(function(err){
+            deferred.reject(err);
+          });
+        return deferred.promise;
+      }
+      return {
+        getTemp: getTemp
+      };
+}]);
+
+
+app.controller("calController", ['$scope','tempData',function($scope,tempData) {
+    var minusDate = 0;
+    var counWeek = 0;
+	var count = monthStartDay;
+    var date = new Date();
+	var year = date.getFullYear();
+    var month = date.getMonth();
+    var dateNow = (new Date());
+    var monName = monNames[month];
+    var day = date.getDate();
+    var dayInMon = (new Date(year, month + 1, 0)).getDate();
+    $scope.curr = monName + ", " + year.toString();
+    $scope.dateNow = dateNow;
+    $scope.weeks = new Array([],[],[],[],[],[],[]);
+    
+    var monthStartDay = new Date(year,month, 1).getDay();
+    
+    if( monthStartDay === 0 ){
+        monthStartDay = 7;
+    } 
+    for(var i=monthStartDay - 1;i>0;i--){
+        var preMonDate = new Date(year, month, minusDate--);
+        var day = {};
+        day.number = preMonDate.getDate();
+        day.id = 'pre_'+day.number;
+        day.class = "disabled";
+        day.data = day.number + "  ";
+        $scope.weeks[counWeek].push(day);
+    }
+    $scope.weeks[counWeek].reverse();
+    
+    var weekRemaining = 7-$scope.weeks[0].length;
+    if(weekRemaining < 1)
+	{
+        counWeek++;
+        weekRemaining = 7;
+    }
+    
+    
+    for (var dateIte = 1; dateIte < dayInMon + 1;  dateIte++) {
+        var date = new Date(year, month, dateIte);
+        
+        var day = {};
+        day.number = date.getDate();
+        day.id = 'curr_'+day.number;
+        day.weather = ' ';
+        day.data = day.number + " " + day.weather;
+        if(dateNow.getDate() === date.getDate()){
+            day.class = "currDay";
+        }
+        var weekRemaining = 7-$scope.weeks[counWeek].length;
+        if(weekRemaining<1)
+		{
+            counWeek++;
+            weekRemaining = 7;
+        }
+        $scope.weeks[counWeek].push(day);
+        count++;
+    }
+
+    var count = count;
+    var plusDate = 1;
+    while (count <= 42) 
+	{
+        var nextMonDate = new Date(year, month + 1, plusDate++);
+        var day = {};
+        day.number = nextMonDate.getDate();
+        day.id = 'next_'+day.number;
+        day.class = "disabled";
+        day.data = day.number + " ";
+        var weekRemaining = 7-$scope.weeks[counWeek].length;
+        if(weekRemaining<1){
+            counWeek++;
+            weekRemaining = 7;
+        }
+
+        $scope.weeks[counWeek].push(day);
+        count++;
+    }
+    
+    tempData.getTemp().then(function(data)
+	{
+        $scope.weather = data;
+        document.getElementsByClassName('currDay')[0].innerHTML = data.item.condition.temp+" "+data.item.condition.text;
+    });
+    
+}]);
+
+		</script>
+		
+    </body>
+</html>
